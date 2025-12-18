@@ -1,103 +1,227 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task Manager</title>
-    <link rel="stylesheet" href="https://unpkg.com/normalize.css/normalize.css">
-    <style type="text/css">
-        body {
-            font-family: 'Arial', sans-serif;
-            padding: 20px;
-            font-size: 16px;
-            background-color: #f4f4f9;
-        }
+    <title>Gestionnaire de Tâches 2025</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
 
-        .task {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: white;
-            padding: 10px 20px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            border-left: 5px solid;
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        gray: { 50: '#F9FAFB', 100: '#F3F4F6', 200: '#E5E7EB', 800: '#1F2937', 900: '#111827' }
+                    }
+                }
+            }
         }
+    </script>
 
-        .high {
-            border-color: red;
-        }
-
-        .medium {
-            border-color: orange;
-        }
-
-        .low {
-            border-color: green;
-        }
-
-        .completed {
-            text-decoration: line-through;
-            color: #bbb;
-        }
-
-        .remove-button {
-            color: red;
-            cursor: pointer;
-            border: none;
-            background: none;
-            font-size: 16px;
-        }
-    </style>
     <script src="https://unpkg.com/vue@3.4.0"></script>
+
+    <style>
+        .task-item { transition: all 0.2s ease-in-out; }
+        .task-item:hover { transform: translateY(-1px); }
+
+        /* Animation pour le dropdown */
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-10px); }
+    </style>
 </head>
 
-<body>
-<div id="app">
-    <form>
-        <!-- Adding tasks form -->
-        <input placeholder="Add new task">
-        <select>
-            <option disabled value="">Select priority</option>
-            <option>High</option>
-            <option>Medium</option>
-            <option>Low</option>
-        </select>
-        <button type="submit">Add Task</button>
-    </form>
+<body class="bg-gray-50 text-gray-800 antialiased min-h-screen flex items-center justify-center py-10">
 
-    <!-- Task filtering -->
-    <input placeholder="Filter tasks...">
+<div id="app" class="w-full max-w-xl px-4">
 
-    <!-- If there no tasks -->
-    <div>
-        <p>No tasks found. Try changing the filter or add some tasks!</p>
-    </div>
+    <header class="mb-8 text-center">
+        <h1 class="text-3xl font-semibold text-gray-900 tracking-tight">Mes Tâches</h1>
+        <p class="text-gray-500 mt-2 text-sm">Restez organisé, restez concentré.</p>
+    </header>
 
-    <div>
-        <h3>Your Tasks</h3>
-        <!-- This is a list of tasks -->
-        <div>
-            <div>
-                <!-- Is task done? -->
-                <input type="checkbox">
-                <!-- Task description -->
-                <span></span>
-            </div>
-            <!-- Removing a task -->
-            <button class="remove-button">✖</button>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-visible"> <!-- overflow-visible est important pour le dropdown -->
+
+        <!-- Section Ajout -->
+        <div class="p-6 border-b border-gray-100 bg-white rounded-t-2xl relative z-20">
+            <form class="flex flex-col gap-4 sm:flex-row" @submit.prevent>
+                <input
+                        class="flex-grow bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 block w-full p-3 outline-none transition-all placeholder-gray-400"
+                        placeholder="Inscrire une tâche"
+                >
+
+                <div class="flex gap-2 relative">
+
+                    <!-- DEBUT DU CUSTOM DROPDOWN -->
+                    <div class="relative w-40">
+                        <!-- Le bouton déclencheur (Trigger) -->
+                        <button
+                                type="button"
+                                @click="isOpen = !isOpen"
+                                class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-gray-900 block p-3 px-4 outline-none flex items-center justify-between transition-all hover:bg-gray-100"
+                        >
+                            <span class="truncate">{{ selectedPriority || 'Priorité' }}</span>
+                            <!-- Icône Chevron qui tourne -->
+                            <svg :class="{'rotate-180': isOpen}" class="w-4 h-4 text-gray-500 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+
+                        <!-- Dropdown -->
+                        <transition name="fade">
+                            <div v-if="isOpen" class="absolute top-full mt-2 left-0 w-full bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden p-1">
+                                <ul class="text-sm text-gray-700">
+                                    <!-- Option Haute -->
+                                    <li @click="selectPriority('Haute')" class="cursor-pointer px-3 py-2 hover:bg-gray-50 rounded-lg flex items-center gap-2 transition-colors">
+                                        <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                                        Haute
+                                    </li>
+                                    <!-- Option Moyenne -->
+                                    <li @click="selectPriority('Moyenne')" class="cursor-pointer px-3 py-2 hover:bg-gray-50 rounded-lg flex items-center gap-2 transition-colors">
+                                        <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+                                        Moyenne
+                                    </li>
+                                    <!-- Option Basse -->
+                                    <li @click="selectPriority('Basse')" class="cursor-pointer px-3 py-2 hover:bg-gray-50 rounded-lg flex items-center gap-2 transition-colors">
+                                        <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                                        Basse
+                                    </li>
+                                </ul>
+                            </div>
+                        </transition>
+                    </div>
+                    <!-- FIN DU CUSTOM DROPDOWN -->
+
+                    <button type="submit" class="text-white bg-gray-900 hover:bg-gray-800 focus:ring-4 focus:ring-gray-300 font-medium rounded-xl text-sm px-6 py-3 transition-colors shadow-sm">
+                        Ajouter
+                    </button>
+                </div>
+            </form>
         </div>
+
+        <!-- Section Filtre -->
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center gap-3 relative z-10">
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <input
+                    class="bg-transparent border-none text-gray-600 text-sm w-full focus:ring-0 placeholder-gray-400"
+                    placeholder="Rechercher une tâche..."
+            >
+        </div>
+
+        <!-- Conteneur Liste -->
+        <!-- Conteneur Liste -->
+        <div class="p-6 bg-white min-h-[200px] z-0">
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Liste des tâches</h3>
+
+            <div class="space-y-3">
+
+                <!-- 1. Exemple PRIORITÉ HAUTE (Rouge) -->
+                <div class="task-item group flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:border-gray-200">
+                    <div class="flex items-center gap-4">
+                        <div class="relative flex items-center">
+                            <input type="checkbox" class="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-gray-300 transition-all checked:border-gray-900 checked:bg-gray-900">
+                            <svg class="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100" viewBox="0 0 14 14" fill="none"><path d="M11.6666 3.5L5.24992 9.91667L2.33325 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900">Corriger le bug critique</span>
+                            <!-- Badge Rouge -->
+                            <span class="text-[10px] font-bold text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full w-fit mt-1 border border-red-100">Haute</span>
+                        </div>
+                    </div>
+                    <button class="remove-button text-gray-300 hover:text-red-500 transition-colors p-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+
+                <!-- 2. Exemple PRIORITÉ MOYENNE (Orange) -->
+                <div class="task-item group flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:border-gray-200">
+                    <div class="flex items-center gap-4">
+                        <div class="relative flex items-center">
+                            <input type="checkbox" class="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-gray-300 transition-all checked:border-gray-900 checked:bg-gray-900">
+                            <svg class="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100" viewBox="0 0 14 14" fill="none"><path d="M11.6666 3.5L5.24992 9.91667L2.33325 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900">Réviser la maquette UX</span>
+                            <!-- Badge Orange -->
+                            <span class="text-[10px] font-bold text-orange-700 bg-orange-50 px-2.5 py-0.5 rounded-full w-fit mt-1 border border-orange-100">Moyenne</span>
+                        </div>
+                    </div>
+                    <button class="remove-button text-gray-300 hover:text-red-500 transition-colors p-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+
+                <!-- 3. Exemple PRIORITÉ BASSE (Vert Emerald) -->
+                <div class="task-item group flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:border-gray-200">
+                    <div class="flex items-center gap-4">
+                        <div class="relative flex items-center">
+                            <input type="checkbox" class="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-gray-300 transition-all checked:border-gray-900 checked:bg-gray-900">
+                            <svg class="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100" viewBox="0 0 14 14" fill="none"><path d="M11.6666 3.5L5.24992 9.91667L2.33325 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900">Mettre à jour les icônes</span>
+                            <!-- Badge Vert -->
+                            <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full w-fit mt-1 border border-emerald-100">Basse</span>
+                        </div>
+                    </div>
+                    <button class="remove-button text-gray-300 hover:text-red-500 transition-colors p-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+
+                <!-- 4. Exemple TÂCHE TERMINÉE (Grisée & Barrée) -->
+                <!-- Notez le 'bg-gray-50' au lieu de 'bg-white' pour l'effet "archivé" -->
+                <div class="task-item group flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-xl">
+                    <div class="flex items-center gap-4">
+                        <div class="relative flex items-center">
+                            <!-- Checkbox cochée par défaut -->
+                            <input type="checkbox" checked class="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-gray-300 transition-all checked:border-gray-400 checked:bg-gray-400">
+                            <svg class="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100" viewBox="0 0 14 14" fill="none"><path d="M11.6666 3.5L5.24992 9.91667L2.33325 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </div>
+                        <div class="flex flex-col">
+                            <!-- Texte barré (line-through) et gris clair -->
+                            <span class="text-sm font-medium text-gray-400 line-through transition-colors">Envoyer la facture</span>
+                            <!-- Badge désaturé pour montrer que la priorité n'est plus active -->
+                            <span class="text-[10px] font-bold text-gray-400 bg-gray-100 px-2.5 py-0.5 rounded-full w-fit mt-1 border border-gray-200">Terminée</span>
+                        </div>
+                    </div>
+                    <button class="remove-button text-gray-300 hover:text-red-500 transition-colors p-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
     </div>
 </div>
 
 <script>
-    const { createApp } = Vue;
+    const { createApp, ref, onBeforeMount, onMounted } = Vue;
 
     const App = {
         setup() {
-            return {
+            // J'ai ajouté ces variables uniquement pour gérer l'ouverture/fermeture visuelle du dropdown
+            const isOpen = ref(false);
+            const selectedPriority = ref('');
 
+            const selectPriority = (val) => {
+                selectedPriority.value = val;
+                isOpen.value = false;
+            };
+
+            onMounted(() => {
+                console.log('on mounted');
+            });
+            onBeforeMount(() => {
+                console.log('before mounted');
+            })
+            return {
+                isOpen,
+                selectedPriority,
+                selectPriority
             }
         },
     };
@@ -105,5 +229,4 @@
     createApp(App).mount('#app');
 </script>
 </body>
-
 </html>
