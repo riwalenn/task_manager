@@ -115,7 +115,7 @@
                             <input type="checkbox" class="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-gray-300 transition-all checked:border-gray-900 checked:bg-gray-900">
                             <svg class="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100" viewBox="0 0 14 14" fill="none"><path d="M11.6666 3.5L5.24992 9.91667L2.33325 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </div>
-                        <div v-if="!task.done" class="flex flex-col">
+                        <div v-if="task.deleted_at === null" class="flex flex-col">
                             <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900">{{ task.name }}</span>
                             <!-- Badge -->
                             <span :class="`${getTaskPriority(task.priority).txtColor} ${getTaskPriority(task.priority).borderColor} ${getTaskPriority(task.priority).backgroundColor}`" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full w-fit mt-1 border">{{ task.priority }}</span>
@@ -142,7 +142,7 @@
 
     const App = {
         setup() {
-            // J'ai ajouté ces variables uniquement pour gérer l'ouverture/fermeture visuelle du dropdown
+            const date = new Date();
             const isOpen = ref(false);
             const selectedPriority = ref('');
             const tasks = ref(JSON.parse(localStorage.getItem('tasks') ?? '[]'));
@@ -152,7 +152,7 @@
                 id: tasks.value.length,
                 name: '',
                 priority: null,
-                done: false
+                deleted_at: null
             });
 
             const filteredTasks = computed(
@@ -190,7 +190,11 @@
             }
 
             const deleteTask = (index) => {
-                tasks.value.splice(index, 1);
+                let taskToDelete = tasks.value[index];
+                if (taskToDelete.deleted_at === null) {
+                    taskToDelete.deleted_at = date.toISOString();
+                    tasks.value[index] = taskToDelete;
+                }
             }
 
             const resetData = () => {
@@ -198,7 +202,7 @@
                   id: tasks.value.length + 1,
                   name: '',
                   priority: null,
-                  done: false
+                  deleted_at: null
               }
             };
 
